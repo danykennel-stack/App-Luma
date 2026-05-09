@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  password         String
+  firstName        String?
+  lastName         String?
+  plan             Plan       @default(FREE)
+  generationsUsed  Int        @default(0)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  documents        Document[]
+
+  @@map("users")
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  type        DocumentType @default(BOTH)
+  status      DocStatus    @default(IN_PROGRESS)
+  inputData   Json
+  cvContent   String?
+  coverLetter String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("documents")
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum DocumentType {
+  CV
+  COVER_LETTER
+  BOTH
+}
+
+enum DocStatus {
+  IN_PROGRESS
+  COMPLETED
+  DRAFT
+}
