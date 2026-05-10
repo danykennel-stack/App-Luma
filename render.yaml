@@ -5,8 +5,8 @@ services:
     region: frankfurt
     plan: free
     rootDir: apps/backend
-    buildCommand: npm install && npx prisma generate --schema=src/prisma/schema.prisma && npm run build
-    startCommand: npx prisma migrate deploy --schema=src/prisma/schema.prisma && npm start
+    buildCommand: npm install && npx prisma generate --schema=src/prisma/schema.prisma
+    startCommand: npx prisma migrate deploy --schema=src/prisma/schema.prisma && node src/index.ts
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
