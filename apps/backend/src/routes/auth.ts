@@ -1,31 +1,21 @@
-import { Router, Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { z } from 'zod';
-import { prisma } from '../lib/prisma';
-import { authMiddleware, AuthRequest } from '../middleware/auth';
+const { Router } = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { prisma } = require('../lib/prisma');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = Router();
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-function signToken(userId: string) {
-  return jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: '30d' });
+function signToken(userId) {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = registerSchema.parse(req.body);
+    const { email, password, firstName, lastName } = req.body;
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: 'Tous les champs sont requis' });
+    }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ error: 'Email déjà utilisé' });
     const hashed = await bcrypt.hash(password, 12);
@@ -35,14 +25,13 @@ router.post('/register', async (req: Request, res: Response) => {
     });
     return res.status(201).json({ user, token: signToken(user.id) });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
-    return res.status(500).json({ error: 'Erreur serveur' });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', async (req, res) => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Identifiants invalides' });
@@ -50,17 +39,20 @@ router.post('/login', async (req: Request, res: Response) => {
     const { password: _, ...safeUser } = user;
     return res.json({ user: safeUser, token: signToken(user.id) });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
-    return res.status(500).json({ error: 'Erreur serveur' });
+    return res.status(500).json({ error: err.message });
   }
 });
 
-router.get('/me', authMiddleware, async (req: Request, res: Response) => {
-  const user = await prisma.user.findUnique({
-    where: { id: (req as AuthRequest).userId },
-    select: { id: true, email: true, firstName: true, lastName: true, plan: true, generationsUsed: true },
-  });
-  return res.json({ user });
+router.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, email: true, firstName: true, lastName: true, plan: true, generationsUsed: true },
+    });
+    return res.json({ user });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
-export default router;
+module.exports = router;
