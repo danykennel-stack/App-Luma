@@ -1,12 +1,11 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
-import authRoutes from './routes/auth';
-import documentsRoutes from './routes/documents';
-import generateRoutes from './routes/generate';
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+require('dotenv').config();
 
-dotenv.config();
+const authRoutes = require('./routes/auth');
+const documentsRoutes = require('./routes/documents');
+const generateRoutes = require('./routes/generate');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
